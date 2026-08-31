@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoreo GICSA — DTS</title>
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --linea:#e3e6ea;
+    --texto:#1a1d21; --suave:#646b75;
+    --verde:#12a150; --amarillo:#d99000; --naranja:#e06c1f; --rojo:#d13438;
+    --acento:#0a84ff;
+    --sombra:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.08);
+    --radio:12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#0f1216; --panel:#171b21; --linea:#262c35;
+      --texto:#e8eaed; --suave:#98a1ad;
+      --verde:#3fb950; --amarillo:#d29922; --naranja:#db6d28; --rojo:#f85149;
+      --sombra:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0f1216; --panel:#171b21; --linea:#262c35;
+    --texto:#e8eaed; --suave:#98a1ad;
+    --verde:#3fb950; --amarillo:#d29922; --naranja:#db6d28; --rojo:#f85149;
+    --sombra:0 1px 2px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:24px;
+    background:var(--bg); color:var(--texto);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1180px; margin:0 auto; }
+
+  .cabeza { display:flex; flex-wrap:wrap; gap:12px; align-items:baseline; justify-content:space-between; margin-bottom:18px; }
+  .cabeza h1 { margin:0; font-size:21px; font-weight:650; letter-spacing:-.01em; }
+  .cabeza .meta { color:var(--suave); font-size:13px; }
+
+  .banner {
+    display:flex; align-items:center; gap:11px;
+    padding:14px 18px; border-radius:var(--radio); margin-bottom:20px;
+    font-weight:600; border:1px solid transparent;
+  }
+  .banner .pt { width:9px; height:9px; border-radius:50%; flex:none; }
+  .banner.ok       { background:color-mix(in srgb,var(--verde) 10%,var(--panel)); border-color:color-mix(in srgb,var(--verde) 30%,transparent); color:var(--verde); }
+  .banner.ok .pt   { background:var(--verde); }
+  .banner.aviso    { background:color-mix(in srgb,var(--amarillo) 10%,var(--panel)); border-color:color-mix(in srgb,var(--amarillo) 32%,transparent); color:var(--amarillo); }
+  .banner.aviso .pt{ background:var(--amarillo); }
+  .banner.critico  { background:color-mix(in srgb,var(--rojo) 10%,var(--panel)); border-color:color-mix(in srgb,var(--rojo) 32%,transparent); color:var(--rojo); }
+  .banner.critico .pt { background:var(--rojo); animation:latido 1.6s ease-in-out infinite; }
+  @keyframes latido { 0%,100%{opacity:1} 50%{opacity:.35} }
+  @media (prefers-reduced-motion:reduce) { .banner.critico .pt { animation:none; } }
+
+  .resumen { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:22px; }
+  .kpi { background:var(--panel); border:1px solid var(--linea); border-radius:var(--radio); padding:14px 16px; box-shadow:var(--sombra); }
+  .kpi .n { font-size:26px; font-weight:660; line-height:1.15; letter-spacing:-.02em; }
+  .kpi .l { font-size:12px; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+  .kpi.caido .n { color:var(--rojo); }
+  .kpi.degradado .n { color:var(--naranja); }
+  .kpi.lento .n { color:var(--amarillo); }
+  .kpi.arriba .n { color:var(--verde); }
+
+  .rejilla { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+
+  .sitio { background:var(--panel); border:1px solid var(--linea); border-left-width:3px; border-radius:var(--radio); padding:15px 16px; box-shadow:var(--sombra); }
+  .sitio.arriba    { border-left-color:var(--verde); }
+  .sitio.lento     { border-left-color:var(--amarillo); }
+  .sitio.degradado { border-left-color:var(--naranja); }
+  .sitio.caido     { border-left-color:var(--rojo); }
+
+  .sitio header { display:flex; align-items:flex-start; gap:10px; margin-bottom:9px; }
+  .punto { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; }
+  .arriba .punto { background:var(--verde); }
+  .lento .punto { background:var(--amarillo); }
+  .degradado .punto { background:var(--naranja); }
+  .caido .punto { background:var(--rojo); }
+  .ident { flex:1; min-width:0; }
+  .sitio h3 { margin:0; font-size:15px; font-weight:620; letter-spacing:-.01em; }
+  .sitio a { font-size:12.5px; color:var(--suave); text-decoration:none; word-break:break-all; }
+  .sitio a:hover { color:var(--acento); text-decoration:underline; }
+
+  .badge { font-size:11px; font-weight:640; padding:3px 9px; border-radius:99px; white-space:nowrap; flex:none; }
+  .arriba .badge { background:color-mix(in srgb,var(--verde) 14%,transparent); color:var(--verde); }
+  .lento .badge { background:color-mix(in srgb,var(--amarillo) 15%,transparent); color:var(--amarillo); }
+  .degradado .badge { background:color-mix(in srgb,var(--naranja) 15%,transparent); color:var(--naranja); }
+  .caido .badge { background:color-mix(in srgb,var(--rojo) 14%,transparent); color:var(--rojo); }
+
+  .detalle { margin:0 0 12px; font-size:13px; color:var(--suave); min-height:2.6em; }
+
+  .metricas { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:10px 0; border-top:1px solid var(--linea); border-bottom:1px solid var(--linea); }
+  .metricas div { display:flex; flex-direction:column; gap:1px; }
+  .metricas .k { font-size:10.5px; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; }
+  .metricas .v { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .metricas .v.bien { color:var(--verde); }
+  .metricas .v.alerta { color:var(--amarillo); }
+  .metricas .v.mal { color:var(--rojo); }
+
+  .historial { display:flex; gap:2px; margin:12px 0 10px; height:22px; align-items:stretch; }
+  .hx { flex:1; border-radius:2px; min-width:2px; }
+  .hx.arriba { background:var(--verde); }
+  .hx.lento { background:var(--amarillo); }
+  .hx.degradado { background:var(--naranja); }
+  .hx.caido { background:var(--rojo); }
+  .hx.vacio { background:var(--linea); opacity:.45; }
+
+  .sitio footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .spark { width:150px; height:32px; }
+  .spark polyline { fill:none; stroke:var(--acento); stroke-width:1.6; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+  .nodata { font-size:11px; color:var(--suave); font-style:italic; }
+  .ip { font-size:11px; color:var(--suave); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; text-align:right; word-break:break-all; }
+
+  .pie { margin-top:26px; padding-top:16px; border-top:1px solid var(--linea); font-size:12px; color:var(--suave); display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; }
+
+  @media (max-width:640px) {
+    body { padding:14px; }
+    .rejilla { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cabeza">
+    <h1>Monitoreo — GICSA</h1>
+    <span class="meta">Última revisión: 31/08/2026 03:50</span>
+  </div>
+
+  <div class="banner critico">
+    <span class="pt"></span>
+    <span>2 sitios caídos</span>
+  </div>
+
+  <section class="resumen">
+    <div class="kpi"><div class="n">12</div><div class="l">Sitios</div></div>
+    <div class="kpi arriba"><div class="n">10</div><div class="l">En línea</div></div>
+    <div class="kpi lento"><div class="n">0</div><div class="l">Lentos</div></div>
+    <div class="kpi degradado"><div class="n">0</div><div class="l">Degradados</div></div>
+    <div class="kpi caido"><div class="n">2</div><div class="l">Caídos</div></div>
+  </section>
+
+  <section class="rejilla">
+
+      <article class="sitio caido">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>GICSA Corporativo</h3>
+            <a href="https://www.gicsa.com.mx" target="_blank" rel="noopener noreferrer">www.gicsa.com.mx</a>
+          </div>
+          <span class="badge">Caído</span>
+        </header>
+
+        <p class="detalle">Error del servidor: HTTP 502</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.54s</span></div>
+          <div><span class="k">Uptime</span><span class="v">0.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">109 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx caido" title="2026-08-31 03:41 — Error del servidor: HTTP 502"></i><i class="hx caido" title="2026-08-31 03:49 — Error del servidor: HTTP 502"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.54 segundos"><polyline points="0.0,11.3 150.0,2.0" /></svg>
+          <span class="ip">45.60.113.69</span>
+        </footer>
+      </article>
+
+      <article class="sitio caido">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>La Isla Acapulco</h3>
+            <a href="https://www.laislaacapulco.com.mx" target="_blank" rel="noopener noreferrer">www.laislaacapulco.com.mx</a>
+          </div>
+          <span class="badge">Caído</span>
+        </header>
+
+        <p class="detalle">Timeout de conexion tras 25s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">—</span></div>
+          <div><span class="k">Uptime</span><span class="v">0.0%</span></div>
+          <div><span class="k">SSL</span><span class="v mal">sin validar</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx caido" title="2026-08-31 03:41 — Timeout de conexion tras 25s"></i><i class="hx caido" title="2026-08-31 03:49 — Timeout de conexion tras 25s"></i>
+        </div>
+
+        <footer>
+          <span class="nodata">sin datos suficientes</span>
+          <span class="ip">201.149.8.204</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Explanada Culiacán</h3>
+            <a href="https://explanadaculiacan.mx" target="_blank" rel="noopener noreferrer">explanadaculiacan.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.34s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.34s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">53 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.37s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.34s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.37 segundos"><polyline points="0.0,2.0 150.0,4.3" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Explanada Pachuca</h3>
+            <a href="https://explanadapachuca.com" target="_blank" rel="noopener noreferrer">explanadapachuca.com</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.42s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.42s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">58 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.38s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.42s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.42 segundos"><polyline points="0.0,4.7 150.0,2.0" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Explanada Puebla</h3>
+            <a href="https://www.explanadapuebla.com" target="_blank" rel="noopener noreferrer">www.explanadapuebla.com</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.5s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.5s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">54 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.83s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.5s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.83 segundos"><polyline points="0.0,2.0 150.0,13.1" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Fórum Buenavista</h3>
+            <a href="https://www.forumbuenavista.mx" target="_blank" rel="noopener noreferrer">www.forumbuenavista.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.51s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.51s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">48 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.76s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.51s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.76 segundos"><polyline points="0.0,2.0 150.0,11.2" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Go Cuernavaca</h3>
+            <a href="https://gocuernavaca.mx" target="_blank" rel="noopener noreferrer">gocuernavaca.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.21s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.21s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">74 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.36s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.21s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.36 segundos"><polyline points="0.0,2.0 150.0,13.7" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Go Riviera Maya</h3>
+            <a href="https://gorivieramaya.mx" target="_blank" rel="noopener noreferrer">gorivieramaya.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.36s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.36s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">84 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.41s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.36s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.41 segundos"><polyline points="0.0,2.0 150.0,5.4" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>La Isla Mérida</h3>
+            <a href="https://www.laislamerida.mx" target="_blank" rel="noopener noreferrer">www.laislamerida.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.48s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.48s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">81 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.82s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.48s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.82 segundos"><polyline points="0.0,2.0 150.0,13.6" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Paseo Arcos Bosques</h3>
+            <a href="https://paseoarcosbosques.mx" target="_blank" rel="noopener noreferrer">paseoarcosbosques.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.33s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.33s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">65 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.37s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.33s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.37 segundos"><polyline points="0.0,2.0 150.0,5.0" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Paseo Interlomas</h3>
+            <a href="https://paseointerlomas.mx" target="_blank" rel="noopener noreferrer">paseointerlomas.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.26s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.26s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">48 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.32s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.26s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.32 segundos"><polyline points="0.0,2.0 150.0,7.2" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+
+      <article class="sitio arriba">
+        <header>
+          <span class="punto" aria-hidden="true"></span>
+          <div class="ident">
+            <h3>Paseo Querétaro</h3>
+            <a href="https://paseoqueretaro.mx" target="_blank" rel="noopener noreferrer">paseoqueretaro.mx</a>
+          </div>
+          <span class="badge">En línea</span>
+        </header>
+
+        <p class="detalle">HTTP 200 en 0.33s</p>
+
+        <div class="metricas">
+          <div><span class="k">Respuesta</span><span class="v">0.33s</span></div>
+          <div><span class="k">Uptime</span><span class="v">100.0%</span></div>
+          <div><span class="k">SSL</span><span class="v bien">53 días</span></div>
+        </div>
+
+        <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
+          <i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx vacio"></i><i class="hx arriba" title="2026-08-31 03:41 — HTTP 200 en 0.37s"></i><i class="hx arriba" title="2026-08-31 03:49 — HTTP 200 en 0.33s"></i>
+        </div>
+
+        <footer>
+          <svg class="spark" viewBox="0 0 150 32" preserveAspectRatio="none" role="img" aria-label="Tiempo de respuesta, maximo 0.37 segundos"><polyline points="0.0,2.0 150.0,5.0" /></svg>
+          <span class="ip">141.193.213.20, 141.193.213.21</span>
+        </footer>
+      </article>
+  </section>
+
+  <div class="pie">
+    <span>Generado por el monitor DTS · 12 sitios con historial</span>
+    <span>Digital Transformation Services</span>
+  </div>
+
+</div>
+</body>
+</html>

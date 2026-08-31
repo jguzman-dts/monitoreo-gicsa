@@ -1,0 +1,293 @@
+{
+  "https://explanadaculiacan.mx": {
+    "nombre": "Explanada Culiacán",
+    "url": "https://explanadaculiacan.mx",
+    "host": "explanadaculiacan.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.34,
+    "url_final": "https://explanadaculiacan.mx/",
+    "kb": 256.4,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-23",
+      "dias": 53
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.34s",
+    "titulo": "Explanada Culiacán"
+  },
+  "https://explanadapachuca.com": {
+    "nombre": "Explanada Pachuca",
+    "url": "https://explanadapachuca.com",
+    "host": "explanadapachuca.com",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.42,
+    "url_final": "https://explanadapachuca.com/",
+    "kb": 258.5,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-28",
+      "dias": 58
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.42s",
+    "titulo": "Explanada Pachuca"
+  },
+  "https://www.explanadapuebla.com": {
+    "nombre": "Explanada Puebla",
+    "url": "https://www.explanadapuebla.com",
+    "host": "www.explanadapuebla.com",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.5,
+    "url_final": "https://explanadapuebla.com/",
+    "kb": 229.2,
+    "redirecciones": 1,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-24",
+      "dias": 54
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.5s",
+    "titulo": "Explanada Puebla"
+  },
+  "https://www.forumbuenavista.mx": {
+    "nombre": "Fórum Buenavista",
+    "url": "https://www.forumbuenavista.mx",
+    "host": "www.forumbuenavista.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.51,
+    "url_final": "https://forumbuenavista.mx/",
+    "kb": 271.9,
+    "redirecciones": 1,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-18",
+      "dias": 48
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.51s",
+    "titulo": "Forum Buenavista"
+  },
+  "https://www.gicsa.com.mx": {
+    "nombre": "GICSA Corporativo",
+    "url": "https://www.gicsa.com.mx",
+    "host": "www.gicsa.com.mx",
+    "tipo": "corporativo",
+    "momento": "2026-08-31 03:49",
+    "problemas": [
+      "HTTP 502"
+    ],
+    "ips": [
+      "45.60.113.69"
+    ],
+    "status": 502,
+    "segundos": 0.54,
+    "url_final": "https://www.gicsa.com.mx/",
+    "kb": 1.6,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-12-18",
+      "dias": 109
+    },
+    "estado": "caido",
+    "detalle": "Error del servidor: HTTP 502",
+    "titulo": "502 - Web server received an invalid response while acting as a gateway or proxy server."
+  },
+  "https://gocuernavaca.mx": {
+    "nombre": "Go Cuernavaca",
+    "url": "https://gocuernavaca.mx",
+    "host": "gocuernavaca.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.21,
+    "url_final": "https://gocuernavaca.mx/",
+    "kb": 265.4,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-11-13",
+      "dias": 74
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.21s",
+    "titulo": "Grand Outlet Cuernavaca"
+  },
+  "https://gorivieramaya.mx": {
+    "nombre": "Go Riviera Maya",
+    "url": "https://gorivieramaya.mx",
+    "host": "gorivieramaya.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.36,
+    "url_final": "https://gorivieramaya.mx/",
+    "kb": 339.3,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-11-23",
+      "dias": 84
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.36s",
+    "titulo": "Grand Outlet Riviera Maya"
+  },
+  "https://www.laislaacapulco.com.mx": {
+    "nombre": "La Isla Acapulco",
+    "url": "https://www.laislaacapulco.com.mx",
+    "host": "www.laislaacapulco.com.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [
+      "Timeout"
+    ],
+    "ips": [
+      "201.149.8.204"
+    ],
+    "estado": "caido",
+    "detalle": "Timeout de conexion tras 25s"
+  },
+  "https://www.laislamerida.mx": {
+    "nombre": "La Isla Mérida",
+    "url": "https://www.laislamerida.mx",
+    "host": "www.laislamerida.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.48,
+    "url_final": "https://laislamerida.mx/",
+    "kb": 278.0,
+    "redirecciones": 1,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-11-20",
+      "dias": 81
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.48s",
+    "titulo": "La Isla Mérida"
+  },
+  "https://paseoarcosbosques.mx": {
+    "nombre": "Paseo Arcos Bosques",
+    "url": "https://paseoarcosbosques.mx",
+    "host": "paseoarcosbosques.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.33,
+    "url_final": "https://paseoarcosbosques.mx/",
+    "kb": 228.2,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-11-04",
+      "dias": 65
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.33s",
+    "titulo": "Paseo Arcos Bosques"
+  },
+  "https://paseointerlomas.mx": {
+    "nombre": "Paseo Interlomas",
+    "url": "https://paseointerlomas.mx",
+    "host": "paseointerlomas.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.26,
+    "url_final": "https://paseointerlomas.mx/",
+    "kb": 252.7,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-18",
+      "dias": 48
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.26s",
+    "titulo": "Home -"
+  },
+  "https://paseoqueretaro.mx": {
+    "nombre": "Paseo Querétaro",
+    "url": "https://paseoqueretaro.mx",
+    "host": "paseoqueretaro.mx",
+    "tipo": "centro comercial",
+    "momento": "2026-08-31 03:49",
+    "problemas": [],
+    "ips": [
+      "141.193.213.20",
+      "141.193.213.21"
+    ],
+    "status": 200,
+    "segundos": 0.33,
+    "url_final": "https://paseoqueretaro.mx/",
+    "kb": 232.2,
+    "redirecciones": 0,
+    "ssl": {
+      "ok": true,
+      "vence": "2026-10-23",
+      "dias": 53
+    },
+    "estado": "arriba",
+    "detalle": "HTTP 200 en 0.33s",
+    "titulo": "Paseo Querétaro"
+  }
+}
