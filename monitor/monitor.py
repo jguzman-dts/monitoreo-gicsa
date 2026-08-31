@@ -390,10 +390,20 @@ def main():
     if hacer_dash:
         try:
             import dashboard
-            salida = dashboard.generar(cliente, resultados, HISTORIAL)
-            print(f"Dashboard: {salida}")
+            interno, publico = dashboard.generar_ambos(cliente, resultados, HISTORIAL)
+            print(f"Dashboard interno: {interno}")
+            print(f"Dashboard publico: {publico}")
         except ImportError:
             print("dashboard.py no encontrado, se omite.")
+
+    if "--publicar" in sys.argv:
+        try:
+            import publicar
+            publicar.subir(BASE / "dashboard-publico.html", cambios)
+        except ImportError:
+            print("publicar.py no encontrado, se omite la publicacion.")
+        except Exception as e:
+            print(f"No se pudo publicar: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":

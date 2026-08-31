@@ -54,18 +54,25 @@ def calcular_uptime(registros):
     return round(100 * ok / len(registros), 1)
 
 
-def barra_historial(registros, maximo=40):
-    """Franja de cuadritos con el historial reciente, estilo status page."""
+def barra_historial(registros, maximo=40, publico=False):
+    """Franja de cuadritos con el historial reciente, estilo status page.
+
+    En modo publico el tooltip lleva solo la hora y el estado. El campo
+    `detalle` trae el mensaje crudo del servidor —"Error del servidor:
+    HTTP 502"— y eso es infraestructura del cliente, no informacion de
+    disponibilidad.
+    """
     recientes = registros[-maximo:]
     faltan = maximo - len(recientes)
     celdas = ['<i class="hx vacio"></i>'] * faltan
     for r in recientes:
         est = r.get("estado", "caido")
         momento = html.escape(r.get("momento", ""))
-        detalle = html.escape(r.get("detalle", "")[:70])
-        celdas.append(
-            f'<i class="hx {est}" title="{momento} — {detalle}"></i>'
-        )
+        if publico:
+            titulo = f"{momento} — {ETIQUETA.get(est, est)}"
+        else:
+            titulo = f"{momento} — {html.escape(r.get('detalle', '')[:70])}"
+        celdas.append(f'<i class="hx {est}" title="{titulo}"></i>')
     return "".join(celdas)
 
 
@@ -89,7 +96,15 @@ def sparkline(registros, ancho=150, alto=32):
     )
 
 
-def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA):
+def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA,
+            publico=False):
+    """Genera el dashboard.
+
+    publico=True omite todo lo que es infraestructura del cliente —IPs,
+    proveedor de hosting, mensajes de error del servidor— y deja solo el
+    estado de disponibilidad. Lo que se publica en un sitio abierto no debe
+    darle a nadie un mapa de la infraestructura de GICSA.
+    """
     if resultados is None:
         if not ESTADO.exists():
             raise SystemExit("No hay estado.json. Corre monitor.py primero.")
@@ -133,7 +148,22 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA):
             ssl_clase, ssl_txt = "mal", "sin validar"
 
         tiempo = f"{r['segundos']}s" if r.get("segundos") is not None else "—"
-        ips = ", ".join(r.get("ips", [])) or "—"
+
+        if publico:
+            # Sin IPs, y el detalle se reduce a una frase neutra: el mensaje
+            # crudo del servidor delata version, proveedor y modo de falla.
+            pie_derecho = ""
+            detalle = {
+                "arriba": "Operando con normalidad",
+                "lento": "Responde con lentitud",
+                "degradado": "Servicio degradado",
+                "caido": "Sin servicio — incidencia en atención",
+            }.get(est, "")
+            bloque_ssl = ""
+        else:
+            pie_derecho = f'<span class="ip">{html.escape(", ".join(r.get("ips", [])) or "—")}</span>'
+            detalle = r.get("detalle", "")
+            bloque_ssl = f'<div><span class="k">SSL</span><span class="v {ssl_clase}">{ssl_txt}</span></div>'
 
         tarjetas.append(f"""
       <article class="sitio {est}">
@@ -146,36 +176,43 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA):
           <span class="badge">{ETIQUETA.get(est, est)}</span>
         </header>
 
-        <p class="detalle">{html.escape(r.get('detalle', ''))}</p>
+        <p class="detalle">{html.escape(detalle)}</p>
 
         <div class="metricas">
           <div><span class="k">Respuesta</span><span class="v">{tiempo}</span></div>
           <div><span class="k">Uptime</span><span class="v">{up if up is not None else '—'}{'%' if up is not None else ''}</span></div>
-          <div><span class="k">SSL</span><span class="v {ssl_clase}">{ssl_txt}</span></div>
+          {bloque_ssl}
         </div>
 
         <div class="historial" title="Historial de revisiones, la más reciente a la derecha">
-          {barra_historial(registros)}
+          {barra_historial(registros, publico=publico)}
         </div>
 
         <footer>
           {sparkline(registros)}
-          <span class="ip">{html.escape(ips)}</span>
+          {pie_derecho}
         </footer>
       </article>""")
 
     return _escribir(
         salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
-        "\n".join(tarjetas), len(hist)
+        "\n".join(tarjetas), len(hist), publico
     )
 
 
-def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt, tarjetas, n_hist):
+def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
+              tarjetas, n_hist, publico=False):
+    # Marca de tiempo en ISO para que el navegador pueda calcular la antiguedad.
+    generado_iso = datetime.datetime.now().astimezone().isoformat()
+    cols_metricas = 2 if publico else 3
+
     doc = f"""<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<meta name="robots" content="noindex">
 <title>Monitoreo {html.escape(cliente)} — DTS</title>
 <style>
   :root {{
@@ -265,7 +302,17 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt, t
 
   .detalle {{ margin:0 0 12px; font-size:13px; color:var(--suave); min-height:2.6em; }}
 
-  .metricas {{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:10px 0; border-top:1px solid var(--linea); border-bottom:1px solid var(--linea); }}
+  .obsoleto {{
+    display:none; align-items:center; gap:11px;
+    padding:14px 18px; border-radius:var(--radio); margin-bottom:14px;
+    font-weight:600; font-size:14px;
+    background:color-mix(in srgb,var(--naranja) 12%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--naranja) 35%,transparent);
+    color:var(--naranja);
+  }}
+  .obsoleto.visible {{ display:flex; }}
+
+  .metricas {{ display:grid; grid-template-columns:repeat({cols_metricas},1fr); gap:8px; padding:10px 0; border-top:1px solid var(--linea); border-bottom:1px solid var(--linea); }}
   .metricas div {{ display:flex; flex-direction:column; gap:1px; }}
   .metricas .k {{ font-size:10.5px; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; }}
   .metricas .v {{ font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }}
@@ -300,7 +347,12 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt, t
 
   <div class="cabeza">
     <h1>Monitoreo — {html.escape(cliente)}</h1>
-    <span class="meta">Última revisión: {ahora}</span>
+    <span class="meta">Última revisión: {ahora} <span id="hace"></span></span>
+  </div>
+
+  <div class="obsoleto" id="obsoleto">
+    <span>⚠️</span>
+    <span id="obsoleto-txt"></span>
   </div>
 
   <div class="banner {banner_clase}">
@@ -326,6 +378,50 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt, t
   </div>
 
 </div>
+
+<script>
+// Un dashboard de disponibilidad que muestra datos viejos sin avisar es peor
+// que no tener dashboard: afirma que todo esta bien cuando en realidad nadie
+// esta midiendo. Aqui se compara la marca de generacion contra el reloj del
+// visitante y se avisa en cuanto los datos dejan de ser confiables.
+(function () {{
+  var GENERADO = new Date("{generado_iso}");
+  var UMBRAL_MIN = 5;
+
+  function texto(min) {{
+    if (min < 1) return "hace unos segundos";
+    if (min < 60) return "hace " + min + " min";
+    var h = Math.floor(min / 60);
+    if (h < 24) return "hace " + h + (h === 1 ? " hora" : " horas");
+    var d = Math.floor(h / 24);
+    return "hace " + d + (d === 1 ? " día" : " días");
+  }}
+
+  function pintar() {{
+    var min = Math.floor((Date.now() - GENERADO.getTime()) / 60000);
+    if (min < 0) min = 0;
+
+    var hace = document.getElementById("hace");
+    if (hace) hace.textContent = "(" + texto(min) + ")";
+
+    var caja = document.getElementById("obsoleto");
+    var txt = document.getElementById("obsoleto-txt");
+    if (!caja || !txt) return;
+
+    if (min >= UMBRAL_MIN) {{
+      txt.textContent =
+        "Estos datos se generaron " + texto(min) + " y el monitor deberia " +
+        "actualizarlos cada minuto. El estado que ves abajo puede ya no ser real.";
+      caja.classList.add("visible");
+    }} else {{
+      caja.classList.remove("visible");
+    }}
+  }}
+
+  pintar();
+  setInterval(pintar, 30000);
+}})();
+</script>
 </body>
 </html>
 """
@@ -333,6 +429,15 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt, t
     return salida
 
 
+def generar_ambos(cliente, resultados=None, historial_path=HISTORIAL):
+    """Genera la version interna (completa) y la publica (sin infraestructura)."""
+    interno = generar(cliente, resultados, historial_path, SALIDA, publico=False)
+    publico = generar(cliente, resultados, historial_path,
+                      BASE / "dashboard-publico.html", publico=True)
+    return interno, publico
+
+
 if __name__ == "__main__":
     cfg = json.loads((BASE / "sitios.json").read_text(encoding="utf-8"))
-    print(generar(cfg["cliente"]))
+    for p in generar_ambos(cfg["cliente"]):
+        print(p)

@@ -1,0 +1,16 @@
+services:
+  dashboard:
+    image: nginx:alpine
+    container_name: dts-dashboard
+    restart: unless-stopped
+    ports:
+      # Solo localhost. Para exponerlo a la red de la oficina hace falta
+      # un servidor de verdad, no una laptop que se suspende.
+      - "127.0.0.1:8099:80"
+    volumes:
+      - ./:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 64M

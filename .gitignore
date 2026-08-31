@@ -7,3 +7,12 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+
+# Datos y salidas del monitor
+monitor/historial.jsonl
+monitor/estado.json
+monitor/dashboard.html
+monitor/dashboard-publico.html
+monitor/bloque-wp.html
+monitor/run.log
+monitor/.ultima-publicacion
