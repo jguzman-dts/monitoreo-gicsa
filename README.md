@@ -72,6 +72,71 @@ sitio_web: https://classeducation.com
 
 ---
 
+## 1b. Monitor de disponibilidad
+
+Vigila los sitios de `monitor/sitios.json`, detecta caidas y las registra en
+una bitacora del vault. **Solo escribe cuando algo cambia**: un sitio estable
+no genera ruido.
+
+### Estados
+
+| | Estado | Significa |
+|---|---|---|
+| 🟢 | `arriba` | Responde 200 en menos de 4 s |
+| 🟡 | `lento` | Responde bien pero tarda mas de 4 s |
+| 🟠 | `degradado` | HTTP 4xx, pagina casi vacia, o dominio estacionado |
+| 🔴 | `caido` | DNS no resuelve, timeout, SSL invalido o HTTP 5xx |
+
+### Uso
+
+```
+cd /mnt/c/Obsidian/dts-tools/monitor && ~/dts-venv/bin/python monitor.py --dashboard
+```
+
+| Variante | Que hace |
+|---|---|
+| *(sin argumentos)* | Revisa y actualiza la bitacora |
+| `--once` | Revisa y muestra en pantalla, no escribe |
+| `--dashboard` | Ademas regenera `dashboard.html` |
+
+### Archivos que genera
+
+| Archivo | Contenido |
+|---|---|
+| `estado.json` | Ultimo estado de cada sitio, para comparar y detectar cambios |
+| `historial.jsonl` | Una linea por revision. Alimenta uptime y graficas |
+| `dashboard.html` | Dashboard autocontenido |
+| Bitacora en el vault | `20-Clientes/Monitoreo/<Cliente> — Bitacora de monitoreo.md` |
+
+### Diagnostico manual
+
+Cuando el monitor marca algo caido, `diagnostico.sh` profundiza: compara www
+contra apex, https contra http, repite 3 veces y muestra cabeceras.
+
+```
+bash /mnt/c/Obsidian/dts-tools/monitor/diagnostico.sh gicsa.com.mx
+```
+
+### Servir el dashboard localmente
+
+```
+python3 -m http.server 8099 --bind 127.0.0.1 --directory /mnt/c/Obsidian/dts-tools/monitor
+```
+
+Queda en <http://127.0.0.1:8099/dashboard.html>.
+
+### Automatizar cada 15 minutos
+
+Desde **PowerShell de Windows**, no desde Ubuntu. Una tarea de Windows funciona
+aunque WSL este apagada: la enciende sola. Un cron dentro de WSL no, porque
+muere con la distro.
+
+```
+schtasks /create /tn "DTS Monitor GICSA" /tr "wsl -d Ubuntu-24.04 -- /home/jairguzman/dts-venv/bin/python /mnt/c/Obsidian/dts-tools/monitor/monitor.py --dashboard" /sc minute /mo 15 /f
+```
+
+---
+
 ## 2. n8n — automatizaciones
 
 Motor de automatizaciones en Docker: conecta formularios, correo, hojas de
