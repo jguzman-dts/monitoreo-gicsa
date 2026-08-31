@@ -340,6 +340,28 @@ def auditar(cliente, url):
         r["alertas"].append(("🟡", "La pagina no tiene ningun `<h1>`"))
     elif len(seo["h1"]) > 1:
         r["alertas"].append(("🟡", f"Hay {len(seo['h1'])} etiquetas `<h1>` — deberia haber una sola"))
+    if seo["title"]:
+        # Marca repetida en el title: suele ser el CMS agregando el sufijo
+        # a un titulo que ya lo traia.
+        partes = [p.strip().lower() for p in re.split(r"[|\-–—·]", seo["title"]) if p.strip()]
+        repetidas = {p for p in partes if partes.count(p) > 1}
+        if repetidas:
+            r["alertas"].append(
+                ("🟡", f"El title repite «{list(repetidas)[0]}» dos veces — probablemente el CMS "
+                       "agrega el nombre del sitio a un title que ya lo incluia")
+            )
+
+    if seo["canonical"]:
+        # Un canonical que apunta a otra URL que la servida manda a Google
+        # senales contradictorias sobre cual pagina indexar.
+        can = seo["canonical"].rstrip("/")
+        final = http["url_final"].rstrip("/")
+        if can != final:
+            r["alertas"].append(
+                ("🔴", f"El canonical apunta a `{can}` pero la pagina se sirve en `{final}`. "
+                       "Google recibe señales contradictorias sobre cual indexar.")
+            )
+
     if not seo["og"]:
         r["alertas"].append(("🟡", "Sin Open Graph — al compartir en redes se ve sin imagen ni titulo"))
     if not seo["viewport"]:
