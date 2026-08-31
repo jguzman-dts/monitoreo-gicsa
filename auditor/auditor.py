@@ -15,6 +15,7 @@ Uso:
 
 import re
 import ssl
+import time
 import sys
 import json
 import socket
@@ -121,11 +122,13 @@ def revisar_ssl(host, puerto=443):
 def revisar_http(url):
     """Sigue redirecciones y mide tiempo y peso."""
     try:
-        inicio = datetime.datetime.now()
+        # Reloj monotonico: la hora del sistema puede saltar hacia atras
+        # (WSL2 resincroniza tras suspender) y dar duraciones negativas.
+        inicio = time.monotonic()
         r = requests.get(
             url, timeout=TIMEOUT, headers={"User-Agent": UA}, allow_redirects=True
         )
-        segundos = (datetime.datetime.now() - inicio).total_seconds()
+        segundos = time.monotonic() - inicio
         cadena = [f"{h.status_code} → {h.headers.get('Location', '?')}" for h in r.history]
         return {
             "ok": True,

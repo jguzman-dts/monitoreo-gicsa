@@ -15,10 +15,12 @@ Uso:
     python3 monitor.py --dashboard  # revisa y ademas regenera el dashboard
 """
 
+import os
 import re
 import ssl
 import sys
 import json
+import time
 import socket
 import datetime
 import concurrent.futures as futures
@@ -31,10 +33,22 @@ except ImportError:
     sys.exit("Falta requests. Instala con: ~/dts-venv/bin/pip install requests")
 
 BASE = Path(__file__).resolve().parent
-VAULT = Path("/mnt/c/Obsidian/DTSLOCAL")
 CONFIG = BASE / "sitios.json"
 HISTORIAL = BASE / "historial.jsonl"
 ESTADO = BASE / "estado.json"
+
+# El vault solo existe en la laptop. En GitHub Actions no hay Obsidian,
+# asi que la bitacora se omite en silencio en lugar de reventar.
+VAULT = Path(os.environ.get("DTS_VAULT", "/mnt/c/Obsidian/DTSLOCAL"))
+
+# El historial SI se versiona (GitHub Actions lo necesita para dar continuidad
+# entre corridas), asi que por defecto NO guarda IPs ni URLs finales: eso es
+# infraestructura del cliente y el repositorio es publico.
+# Las IPs siguen visibles en estado.json, que es local y no se versiona.
+# Seguro por defecto: hay que pedir explicitamente el historial completo.
+HISTORIAL_COMPLETO = os.environ.get("DTS_HISTORIAL_COMPLETO", "").lower() in (
+    "1", "true", "si", "yes"
+)
 
 TIMEOUT = 25
 UA = "Mozilla/5.0 (compatible; DTS-Monitor/1.0; +https://digitalts.com.mx)"
@@ -116,11 +130,14 @@ def revisar(sitio):
         return r
 
     try:
-        t0 = ahora()
+        # Reloj monotonico, no la hora del sistema: WSL2 resincroniza su reloj
+        # con Windows tras suspender el equipo y el salto hacia atras producia
+        # tiempos de respuesta negativos.
+        t0 = time.monotonic()
         resp = requests.get(
             url, timeout=TIMEOUT, headers={"User-Agent": UA}, allow_redirects=True
         )
-        segundos = (ahora() - t0).total_seconds()
+        segundos = time.monotonic() - t0
     except requests.exceptions.SSLError as e:
         r["estado"] = CAIDO
         r["detalle"] = f"Error de certificado SSL: {str(e)[:120]}"
@@ -194,12 +211,34 @@ def revisar(sitio):
 # ------------------------------------------------------------- persistencia
 
 def cargar_estado_previo():
+    """Estado de la corrida anterior, para detectar que cambio.
+
+    Prefiere `estado.json`, que es local. En GitHub Actions ese archivo no
+    existe —no se versiona porque lleva las IPs del cliente— asi que el
+    estado se reconstruye desde la ultima entrada de cada sitio en el
+    historial, que si viaja con el repositorio.
+    """
     if ESTADO.exists():
         try:
             return json.loads(ESTADO.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            return {}
-    return {}
+            pass
+
+    if not HISTORIAL.exists():
+        return {}
+
+    previo = {}
+    for linea in HISTORIAL.read_text(encoding="utf-8").splitlines():
+        linea = linea.strip()
+        if not linea:
+            continue
+        try:
+            r = json.loads(linea)
+        except json.JSONDecodeError:
+            continue
+        if r.get("url"):
+            previo[r["url"]] = r      # se queda la ultima de cada sitio
+    return previo
 
 
 def guardar(resultados):
@@ -207,10 +246,13 @@ def guardar(resultados):
     ESTADO.write_text(
         json.dumps(estado, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    omitir = {"titulo"}
+    if not HISTORIAL_COMPLETO:
+        omitir |= {"ips", "url_final"}
     with HISTORIAL.open("a", encoding="utf-8") as f:
         for r in resultados:
             f.write(json.dumps(
-                {k: v for k, v in r.items() if k != "titulo"},
+                {k: v for k, v in r.items() if k not in omitir},
                 ensure_ascii=False
             ) + "\n")
 
@@ -233,6 +275,8 @@ def detectar_cambios(resultados, previo):
 # ---------------------------------------------------------------- bitacora
 
 def escribir_bitacora(cliente, resultados, cambios):
+    if not VAULT.exists():
+        return None
     carpeta = VAULT / "20-Clientes" / "Monitoreo"
     carpeta.mkdir(parents=True, exist_ok=True)
     archivo = carpeta / f"{cliente} — Bitacora de monitoreo.md"
@@ -385,7 +429,10 @@ def main():
 
     guardar(resultados)
     archivo = escribir_bitacora(cliente, resultados, cambios)
-    print(f"\nBitacora: {archivo}")
+    if archivo:
+        print(f"\nBitacora: {archivo}")
+    else:
+        print(f"\nSin vault en {VAULT}, se omite la bitacora.")
 
     if hacer_dash:
         try:

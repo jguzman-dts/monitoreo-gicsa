@@ -1,0 +1,76 @@
+name: Monitor GICSA
+
+# Corre en los servidores de GitHub, no en la laptop de nadie. Ese es el punto:
+# el monitoreo deja de depender de que un equipo este encendido.
+on:
+  schedule:
+    # Cada 5 minutos es el minimo que permite GitHub Actions. No garantiza
+    # puntualidad exacta bajo carga: puede correrse unos minutos.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:        # boton para ejecutarlo a mano
+  push:
+    paths:
+      - "monitor/**"
+      - ".github/workflows/monitor.yml"
+
+# Si un ciclo se alarga, que el siguiente espere en vez de encimarse y
+# provocar dos escrituras simultaneas del historial.
+concurrency:
+  group: monitor-gicsa
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # para guardar el historial de vuelta en el repo
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # No hay Obsidian aqui: el monitor omite la bitacora y solo publica.
+      DTS_VAULT: /nonexistent
+      WP_USER: ${{ secrets.WP_USER }}
+      WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+
+    steps:
+      - name: Traer el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install --quiet requests beautifulsoup4
+
+      - name: Revisar los sitios y publicar
+        id: revision
+        working-directory: monitor
+        run: python monitor.py --dashboard --publicar
+
+      - name: Guardar el historial
+        run: |
+          if [ -z "$(git status --porcelain monitor/historial.jsonl)" ]; then
+            echo "Sin cambios que guardar."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monitor/historial.jsonl
+          git commit -m "Monitoreo automatico: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # Otro ciclo pudo haber escrito mientras tanto.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push
+
+      - name: Publicar el dashboard como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: |
+            monitor/dashboard.html
+            monitor/dashboard-publico.html
+          retention-days: 7
