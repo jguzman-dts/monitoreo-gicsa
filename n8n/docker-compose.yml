@@ -1,0 +1,50 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      # --- Zona horaria ---
+      - GENERIC_TIMEZONE=America/Mexico_City
+      - TZ=America/Mexico_City
+
+      # --- Acceso ---
+      # Solo escucha en localhost. No se expone a la red de la oficina
+      # ni a internet. Para eso hace falta un servidor real, no esta laptop.
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+
+      # --- Seguridad ---
+      # La clave se lee de .env, nunca va en este archivo.
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_SECURE_COOKIE=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=true
+
+      # --- Contencion de recursos ---
+      # Esta laptop tiene 4 GB asignados a WSL2. Sin esto, n8n
+      # acumula historial de ejecuciones hasta llenar el disco.
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - N8N_PAYLOAD_SIZE_MAX=16
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # El vault, para que los flujos puedan escribir notas en Obsidian.
+      # Montado solo-lectura por defecto: quita el `:ro` cuando de verdad
+      # necesites que n8n escriba, y solo entonces.
+      - /mnt/c/Obsidian/DTSLOCAL:/vault:ro
+
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+volumes:
+  n8n_data:

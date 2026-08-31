@@ -1,0 +1,9 @@
+# Secretos - nunca versionar
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
