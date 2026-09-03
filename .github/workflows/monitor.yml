@@ -42,9 +42,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          # Sin esta ruta, el cache busca requirements.txt en la raiz del
+          # repositorio y falla el paso entero cuando no lo encuentra.
+          cache-dependency-path: monitor/requirements.txt
 
       - name: Instalar dependencias
-        run: pip install --quiet requests beautifulsoup4
+        run: pip install --quiet -r monitor/requirements.txt
 
       - name: Revisar los sitios y publicar
         id: revision

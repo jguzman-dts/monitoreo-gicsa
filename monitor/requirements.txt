@@ -1,0 +1,8 @@
+# Dependencias del monitor y del auditor de sitios.
+#
+# Se fijan versiones minimas, no exactas: estos paquetes reciben parches de
+# seguridad seguido y clavarlos a una version concreta significa quedarse
+# atras. El rango minimo garantiza las APIs que se usan aqui.
+
+requests>=2.32
+beautifulsoup4>=4.12
