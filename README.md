@@ -135,12 +135,12 @@ del Programador de tareas: **no suprime la consola del proceso**. Sin esa
 capa, cada minuto parpadeaba una ventana de cmd en pantalla.
 
 ```
-wscript.exe //nologo C:Obsidiandts-toolsmonitorun-silencioso.vbs
+wscript.exe //nologo "C:\Obsidian\dts-tools\monitor\run-silencioso.vbs"
 ```
 
 | Accion | Comando (PowerShell) |
 |---|---|
-| Ver estado | `Get-ScheduledTask "DTS Monitor GICSA" | Get-ScheduledTaskInfo` |
+| Ver estado | `Get-ScheduledTask "DTS Monitor GICSA"` + `Get-ScheduledTaskInfo` |
 | Correr ahora | `Start-ScheduledTask "DTS Monitor GICSA"` |
 | Desactivar | `Disable-ScheduledTask "DTS Monitor GICSA"` |
 | Eliminar | `schtasks /delete /tn "DTS Monitor GICSA" /f` |
