@@ -125,14 +125,50 @@ python3 -m http.server 8099 --bind 127.0.0.1 --directory /mnt/c/Obsidian/dts-too
 
 Queda en <http://127.0.0.1:8099/dashboard.html>.
 
-### Automatizar cada 15 minutos
+### Automatizar (ya configurado)
+
+La tarea de Windows `DTS Monitor GICSA` corre **cada minuto**.
+
+Se ejecuta a traves de `run-silencioso.vbs`, no directo sobre `run.cmd`.
+La opcion "Hidden" de una tarea programada solo la oculta en la interfaz
+del Programador de tareas: **no suprime la consola del proceso**. Sin esa
+capa, cada minuto parpadeaba una ventana de cmd en pantalla.
+
+```
+wscript.exe //nologo C:Obsidiandts-toolsmonitorun-silencioso.vbs
+```
+
+| Accion | Comando (PowerShell) |
+|---|---|
+| Ver estado | `Get-ScheduledTask "DTS Monitor GICSA" | Get-ScheduledTaskInfo` |
+| Correr ahora | `Start-ScheduledTask "DTS Monitor GICSA"` |
+| Desactivar | `Disable-ScheduledTask "DTS Monitor GICSA"` |
+| Eliminar | `schtasks /delete /tn "DTS Monitor GICSA" /f` |
+
+Se usa una tarea de Windows y no un cron dentro de WSL porque la tarea
+**enciende WSL sola si esta apagada**; un cron de Linux muere con la distro.
+
+### Reporte de incidencias
+
+El dashboard incluye un reporte con tres periodos —**24 horas, 7 dias y
+30 dias**— que se alternan con pestanas. Los tres se generan de una vez y
+se alternan con CSS: la pagina es estatica y vive tambien dentro de
+WordPress, donde no hay servidor que responda a un cambio de periodo.
+
+Cuando el historial es mas corto que el periodo elegido, el panel lo
+declara ("solo hay 3 dias de historial"). Un reporte de 30 dias que en
+realidad cubre 3 se lee como si fueran 30.
+
+`incidencias.py` reconstruye los incidentes desde las mediciones sueltas:
+un incidente es un periodo continuo fuera de estado sano, y se exigen al
+menos 2 revisiones consecutivas para no registrar parpadeos.
+
 
 Desde **PowerShell de Windows**, no desde Ubuntu. Una tarea de Windows funciona
 aunque WSL este apagada: la enciende sola. Un cron dentro de WSL no, porque
 muere con la distro.
 
 ```
-schtasks /create /tn "DTS Monitor GICSA" /tr "wsl -d Ubuntu-24.04 -- /home/jairguzman/dts-venv/bin/python /mnt/c/Obsidian/dts-tools/monitor/monitor.py --dashboard" /sc minute /mo 15 /f
 ```
 
 ---

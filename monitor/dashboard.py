@@ -358,9 +358,17 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
 
   /* ---------- Reporte de incidencias ---------- */
   .incidencias {{ margin-top:34px; padding-top:26px; border-top:1px solid var(--linea); }}
-  .titulo-sec {{ display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; justify-content:space-between; margin-bottom:16px; }}
+  .titulo-sec {{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px; }}
   .titulo-sec h2 {{ margin:0; font-size:18px; font-weight:640; letter-spacing:-.01em; }}
-  .periodo {{ font-size:12.5px; color:var(--suave); font-variant-numeric:tabular-nums; }}
+  .periodo {{ margin:0 0 15px; font-size:12.5px; color:var(--suave); font-variant-numeric:tabular-nums; }}
+
+  /* Pestañas de periodo */
+  .tabs {{ display:inline-flex; gap:2px; background:color-mix(in srgb,var(--suave) 11%,transparent); padding:3px; border-radius:9px; }}
+  .tab {{ appearance:none; border:0; background:transparent; cursor:pointer; padding:6px 14px; border-radius:6px; font:inherit; font-size:12.5px; font-weight:600; color:var(--suave); transition:background .15s ease,color .15s ease; }}
+  .tab:hover {{ color:var(--texto); }}
+  .tab.activa {{ background:var(--panel); color:var(--texto); box-shadow:var(--sombra); }}
+  .tab:focus-visible {{ outline:2px solid var(--acento); outline-offset:1px; }}
+  .panel.oculto {{ display:none; }}
 
   .patron {{ background:color-mix(in srgb,var(--naranja) 9%,var(--panel)); border:1px solid color-mix(in srgb,var(--naranja) 30%,transparent); border-radius:var(--radio); padding:15px 18px; margin-bottom:20px; }}
   .patron h4 {{ margin:0 0 7px; font-size:14px; font-weight:640; color:var(--naranja); }}
@@ -508,6 +516,51 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
   pintar();
   setInterval(pintar, 30000);
 }})();
+
+// Pestañas del reporte de incidencias. Los tres periodos ya vienen en el
+// HTML: aqui solo se alterna cual se muestra. Sin peticiones, sin servidor,
+// funciona igual embebido en WordPress que abierto como archivo suelto.
+(function () {{
+  var tabs = [].slice.call(document.querySelectorAll(".incidencias .tab"));
+  var paneles = [].slice.call(document.querySelectorAll(".incidencias .panel"));
+  if (!tabs.length) return;
+
+  function activar(clave, foco) {{
+    tabs.forEach(function (t) {{
+      var on = t.getAttribute("data-periodo") === clave;
+      t.classList.toggle("activa", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      if (on && foco) t.focus();
+    }});
+    paneles.forEach(function (p) {{
+      p.classList.toggle("oculto", p.getAttribute("data-periodo") !== clave);
+    }});
+    try {{ localStorage.setItem("dts-periodo", clave); }} catch (e) {{}}
+  }}
+
+  tabs.forEach(function (t, i) {{
+    t.addEventListener("click", function () {{
+      activar(t.getAttribute("data-periodo"));
+    }});
+    // Flechas para moverse entre pestañas, como espera un lector de pantalla.
+    t.addEventListener("keydown", function (e) {{
+      var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      var sig = tabs[(i + d + tabs.length) % tabs.length];
+      activar(sig.getAttribute("data-periodo"), true);
+    }});
+  }});
+
+  // Recordar el periodo que el usuario venia viendo.
+  try {{
+    var guardado = localStorage.getItem("dts-periodo");
+    if (guardado && document.querySelector('.panel[data-periodo="' + guardado + '"]')) {{
+      activar(guardado);
+    }}
+  }} catch (e) {{}}
+}})();
 </script>
 </body>
 </html>
@@ -593,7 +646,7 @@ def _columnas_hora(por_hora):
     return "".join(salida)
 
 
-def _linea_tiempo(incidentes, publico, limite=12):
+def _linea_tiempo(incidentes, publico, limite=10):
     if not incidentes:
         return '<p class="vacio">Sin incidentes registrados en el periodo. 🎉</p>'
 
@@ -616,26 +669,79 @@ def _linea_tiempo(incidentes, publico, limite=12):
     return "".join(salida)
 
 
-def seccion_incidencias(publico=False, historial_path=HISTORIAL, dias=7):
+PERIODOS = [
+    ("dia",    "24 horas",  1),
+    ("semana", "7 días",    7),
+    ("mes",    "30 días",  30),
+]
+
+
+def seccion_incidencias(publico=False, historial_path=HISTORIAL):
+    """Reporte con pestañas de dia, semana y mes.
+
+    Los tres paneles se generan de una vez y se alternan con CSS: la pagina
+    es estatica y vive tambien dentro de WordPress, donde no hay servidor
+    que responda a un cambio de periodo.
+    """
     try:
         import incidencias as inc
     except ImportError:
         return ""
 
-    try:
-        lista, res = inc.analizar(historial_path, dias)
-    except Exception:
+    pestanas, paneles = [], []
+    hubo_datos = False
+
+    for i, (clave, etiqueta, dias) in enumerate(PERIODOS):
+        try:
+            lista, res = inc.analizar(historial_path, dias)
+        except Exception:
+            continue
+        if not res.get("revisiones"):
+            continue
+        hubo_datos = True
+        activa = " activa" if not pestanas else ""
+        pestanas.append(
+            f'<button type="button" class="tab{activa}" role="tab" '
+            f'id="tab-{clave}" aria-controls="panel-{clave}" '
+            f'aria-selected="{"true" if activa else "false"}" '
+            f'data-periodo="{clave}">{etiqueta}</button>'
+        )
+        paneles.append(
+            f'<div class="panel{"" if activa else " oculto"}" role="tabpanel" '
+            f'id="panel-{clave}" aria-labelledby="tab-{clave}" '
+            f'data-periodo="{clave}">{_panel_periodo(inc, lista, res, publico, dias)}</div>'
+        )
+
+    if not hubo_datos:
         return ""
 
-    if not res.get("revisiones"):
-        return ""
+    return f"""
+  <section class="incidencias">
+    <div class="titulo-sec">
+      <h2>Reporte de incidencias</h2>
+      <div class="tabs" role="tablist" aria-label="Periodo del reporte">
+        {''.join(pestanas)}
+      </div>
+    </div>
+    {''.join(paneles)}
+  </section>"""
 
+
+def _panel_periodo(inc, lista, res, publico, dias_pedidos):
     disp = res["disponibilidad"]
     clase_disp = "bien" if disp >= 99.5 else ("alerta" if disp >= 97 else "mal")
 
     periodo = ""
+    cobertura = ""
     if res["desde"] and res["hasta"]:
         periodo = f"{res['desde']:%d/%m} – {res['hasta']:%d/%m}"
+        # El monitoreo empezo hace poco: decirlo, porque si no un periodo de
+        # 30 dias que en realidad cubre 3 se lee como si fueran 30.
+        reales = (res["hasta"] - res["desde"]).total_seconds() / 86400
+        if reales < dias_pedidos * 0.9:
+            n = max(1, round(reales))
+            cobertura = (f' · <b>solo hay {n} día{"s" if n != 1 else ""} '
+                         f"de historial</b>")
 
     # Aviso de caidas simultaneas: varios sitios cayendo dentro de la misma
     # ventana casi nunca son fallas independientes.
@@ -657,11 +763,7 @@ def seccion_incidencias(publico=False, historial_path=HISTORIAL, dias=7):
       </div>"""
 
     return f"""
-  <section class="incidencias">
-    <div class="titulo-sec">
-      <h2>Reporte de incidencias</h2>
-      <span class="periodo">{periodo} · {res['revisiones']:,} revisiones</span>
-    </div>
+    <p class="periodo">{periodo} · {res['revisiones']:,} revisiones{cobertura}</p>
 
     <section class="resumen">
       <div class="kpi"><div class="n {clase_disp}">{disp}%</div><div class="l">Disponibilidad</div></div>
@@ -690,10 +792,9 @@ def seccion_incidencias(publico=False, historial_path=HISTORIAL, dias=7):
     </figure>
 
     <figure class="ancha">
-      <figcaption>Últimos incidentes{f' · {min(12, len(lista))} de {len(lista)}' if len(lista) > 12 else ''}</figcaption>
-      {_linea_tiempo(lista, publico)}
-    </figure>
-  </section>"""
+      <figcaption>Últimos incidentes{f' · {min(10, len(lista))} de {len(lista)}' if len(lista) > 10 else ''}</figcaption>
+      {_linea_tiempo(lista, publico, 10)}
+    </figure>"""
 
 
 def generar_ambos(cliente, resultados=None, historial_path=HISTORIAL):
