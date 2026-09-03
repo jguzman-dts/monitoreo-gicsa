@@ -149,6 +149,19 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA,
 
         tiempo = f"{r['segundos']}s" if r.get("segundos") is not None else "—"
 
+        # Estado del panel de WordPress
+        admin = r.get("admin")
+        if admin is None:
+            chip_admin = ""
+        elif admin.get("ok"):
+            chip_admin = '<span class="chip bien" title="wp-login.php responde con formulario de acceso">Panel ✓</span>'
+        else:
+            det = (f"HTTP {admin['status']}" if admin.get("status")
+                   else admin.get("error", "sin respuesta"))
+            titulo = "El panel de WordPress no responde correctamente"
+            chip_admin = (f'<span class="chip mal" title="{html.escape(titulo)}">'
+                          f'Panel ✗{"" if publico else " · " + html.escape(det)}</span>')
+
         if publico:
             # Sin IPs, y el detalle se reduce a una frase neutra: el mensaje
             # crudo del servidor delata version, proveedor y modo de falla.
@@ -159,6 +172,8 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA,
                 "degradado": "Servicio degradado",
                 "caido": "Sin servicio — incidencia en atención",
             }.get(est, "")
+            if admin is not None and not admin.get("ok"):
+                detalle = "El sitio carga pero su panel de administración no responde"
             bloque_ssl = ""
         else:
             pie_derecho = f'<span class="ip">{html.escape(", ".join(r.get("ips", [])) or "—")}</span>'
@@ -177,6 +192,7 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA,
         </header>
 
         <p class="detalle">{html.escape(detalle)}</p>
+        {f'<div class="chips">{chip_admin}</div>' if chip_admin else ''}
 
         <div class="metricas">
           <div><span class="k">Respuesta</span><span class="v">{tiempo}</span></div>
@@ -300,7 +316,12 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
   .degradado .badge {{ background:color-mix(in srgb,var(--naranja) 15%,transparent); color:var(--naranja); }}
   .caido .badge {{ background:color-mix(in srgb,var(--rojo) 14%,transparent); color:var(--rojo); }}
 
-  .detalle {{ margin:0 0 12px; font-size:13px; color:var(--suave); min-height:2.6em; }}
+  .detalle {{ margin:0 0 10px; font-size:13px; color:var(--suave); min-height:2.6em; }}
+
+  .chips {{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }}
+  .chip {{ font-size:10.5px; font-weight:640; padding:2px 8px; border-radius:5px; letter-spacing:.01em; }}
+  .chip.bien {{ background:color-mix(in srgb,var(--verde) 13%,transparent); color:var(--verde); }}
+  .chip.mal  {{ background:color-mix(in srgb,var(--rojo) 13%,transparent); color:var(--rojo); }}
 
   .obsoleto {{
     display:none; align-items:center; gap:11px;

@@ -1,18 +1,19 @@
 {
   "cliente": "GICSA",
   "intervalo_sugerido_minutos": 15,
+  "_nota_wp": "wp:true revisa ademas /wp-login.php. Si la portada carga pero el panel no responde, el sitio se marca degradado: se ve bien por fuera pero el cliente no puede administrarlo.",
   "sitios": [
-    { "nombre": "GICSA Corporativo",   "url": "https://www.gicsa.com.mx",         "tipo": "corporativo" },
-    { "nombre": "La Isla Mérida",      "url": "https://www.laislamerida.mx",      "tipo": "centro comercial" },
-    { "nombre": "La Isla Acapulco",    "url": "https://www.laislaacapulco.com.mx","tipo": "centro comercial" },
-    { "nombre": "Explanada Puebla",    "url": "https://www.explanadapuebla.com",  "tipo": "centro comercial" },
-    { "nombre": "Explanada Pachuca",   "url": "https://explanadapachuca.com",     "tipo": "centro comercial" },
-    { "nombre": "Explanada Culiacán",  "url": "https://explanadaculiacan.mx",     "tipo": "centro comercial" },
-    { "nombre": "Fórum Buenavista",    "url": "https://www.forumbuenavista.mx",   "tipo": "centro comercial" },
-    { "nombre": "Go Cuernavaca",       "url": "https://gocuernavaca.mx",          "tipo": "centro comercial" },
-    { "nombre": "Go Riviera Maya",     "url": "https://gorivieramaya.mx",         "tipo": "centro comercial" },
-    { "nombre": "Paseo Arcos Bosques", "url": "https://paseoarcosbosques.mx",     "tipo": "centro comercial" },
-    { "nombre": "Paseo Interlomas",    "url": "https://paseointerlomas.mx",       "tipo": "centro comercial" },
-    { "nombre": "Paseo Querétaro",     "url": "https://paseoqueretaro.mx",        "tipo": "centro comercial" }
+    { "nombre": "GICSA Corporativo",   "url": "https://www.gicsa.com.mx",         "tipo": "corporativo",      "wp": false },
+    { "nombre": "La Isla Mérida",      "url": "https://www.laislamerida.mx",      "tipo": "centro comercial", "wp": true },
+    { "nombre": "La Isla Acapulco",    "url": "https://www.laislaacapulco.com.mx","tipo": "centro comercial", "wp": null },
+    { "nombre": "Explanada Puebla",    "url": "https://www.explanadapuebla.com",  "tipo": "centro comercial", "wp": true },
+    { "nombre": "Explanada Pachuca",   "url": "https://explanadapachuca.com",     "tipo": "centro comercial", "wp": true },
+    { "nombre": "Explanada Culiacán",  "url": "https://explanadaculiacan.mx",     "tipo": "centro comercial", "wp": true },
+    { "nombre": "Fórum Buenavista",    "url": "https://www.forumbuenavista.mx",   "tipo": "centro comercial", "wp": true },
+    { "nombre": "Go Cuernavaca",       "url": "https://gocuernavaca.mx",          "tipo": "centro comercial", "wp": true },
+    { "nombre": "Go Riviera Maya",     "url": "https://gorivieramaya.mx",         "tipo": "centro comercial", "wp": true },
+    { "nombre": "Paseo Arcos Bosques", "url": "https://paseoarcosbosques.mx",     "tipo": "centro comercial", "wp": true },
+    { "nombre": "Paseo Interlomas",    "url": "https://paseointerlomas.mx",       "tipo": "centro comercial", "wp": true },
+    { "nombre": "Paseo Querétaro",     "url": "https://paseoqueretaro.mx",        "tipo": "centro comercial", "wp": true }
   ]
 }

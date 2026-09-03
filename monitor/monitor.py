@@ -108,6 +108,39 @@ def revisar_ssl(host):
         return {"ok": False, "error": f"{type(e).__name__}"}
 
 
+def revisar_admin(url):
+    """Revisa que el panel de WordPress responda.
+
+    Que la portada cargue no significa que el sitio este sano: la portada
+    suele venir de cache o CDN, mientras el panel toca PHP y base de datos
+    de verdad. Un sitio que se ve bien pero cuyo wp-admin no responde es un
+    sitio que el cliente no puede administrar — y el aviso de que algo se
+    esta cayendo por dentro.
+    """
+    destino = url.rstrip("/") + "/wp-login.php"
+    try:
+        t0 = time.monotonic()
+        r = requests.get(
+            destino, timeout=TIMEOUT, headers={"User-Agent": UA},
+            allow_redirects=True,
+        )
+        segundos = round(time.monotonic() - t0, 2)
+    except Exception as e:
+        return {"ok": False, "error": type(e).__name__, "url": destino}
+
+    # El formulario de acceso debe estar ahi. Un 200 que no lo trae suele ser
+    # una pagina de error o un WAF interponiendose.
+    tiene_form = bool(re.search(r'name=["\']log["\']|id=["\']loginform["\']',
+                                r.text, re.I))
+    return {
+        "ok": r.status_code == 200 and tiene_form,
+        "status": r.status_code,
+        "segundos": segundos,
+        "formulario": tiene_form,
+        "url": destino,
+    }
+
+
 def revisar(sitio):
     """Revisa un sitio y devuelve su estado normalizado."""
     url = sitio["url"]
@@ -204,6 +237,32 @@ def revisar(sitio):
     m = re.search(r"<title[^>]*>(.*?)</title>", resp.text, re.I | re.S)
     if m:
         r["titulo"] = re.sub(r"\s+", " ", m.group(1)).strip()[:120]
+
+    # Panel de WordPress. Solo si la portada respondio: si el sitio esta
+    # caido, revisar el admin no aporta nada y duplica el timeout.
+    if sitio.get("wp") is True and r["estado"] != CAIDO:
+        admin = revisar_admin(url)
+        r["admin"] = admin
+        if not admin["ok"]:
+            if not admin.get("status"):
+                detalle = f"el panel no responde ({admin.get('error', 'sin respuesta')})"
+            elif admin["status"] >= 500:
+                detalle = f"el panel devuelve HTTP {admin['status']}"
+            elif admin["status"] == 403:
+                detalle = "el panel devuelve 403, hay algo bloqueando el acceso"
+            elif not admin.get("formulario"):
+                detalle = (f"el panel responde HTTP {admin['status']} pero sin "
+                           "formulario de acceso")
+            else:
+                detalle = f"el panel devuelve HTTP {admin['status']}"
+
+            r["problemas"].append("wp-admin inaccesible")
+            # La portada carga pero no se puede administrar: degradado, no caido.
+            if r["estado"] == ARRIBA:
+                r["estado"] = DEGRADADO
+            r["detalle"] = f"La portada carga pero {detalle}"
+        elif admin["segundos"] > SEGUNDOS_LENTO * 2:
+            r["problemas"].append("wp-admin lento")
 
     return r
 
