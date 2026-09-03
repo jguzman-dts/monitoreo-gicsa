@@ -212,12 +212,13 @@ def generar(cliente, resultados=None, historial_path=HISTORIAL, salida=SALIDA,
 
     return _escribir(
         salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
-        "\n".join(tarjetas), len(hist), publico
+        "\n".join(tarjetas), len(hist), publico,
+        seccion_incidencias(publico, historial_path),
     )
 
 
 def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
-              tarjetas, n_hist, publico=False):
+              tarjetas, n_hist, publico=False, incidencias_html=""):
     # Marca de tiempo en ISO para que el navegador pueda calcular la antiguedad.
     generado_iso = datetime.datetime.now().astimezone().isoformat()
     cols_metricas = 2 if publico else 3
@@ -355,11 +356,76 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
   .nodata {{ font-size:11px; color:var(--suave); font-style:italic; }}
   .ip {{ font-size:11px; color:var(--suave); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; text-align:right; word-break:break-all; }}
 
+  /* ---------- Reporte de incidencias ---------- */
+  .incidencias {{ margin-top:34px; padding-top:26px; border-top:1px solid var(--linea); }}
+  .titulo-sec {{ display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; justify-content:space-between; margin-bottom:16px; }}
+  .titulo-sec h2 {{ margin:0; font-size:18px; font-weight:640; letter-spacing:-.01em; }}
+  .periodo {{ font-size:12.5px; color:var(--suave); font-variant-numeric:tabular-nums; }}
+
+  .patron {{ background:color-mix(in srgb,var(--naranja) 9%,var(--panel)); border:1px solid color-mix(in srgb,var(--naranja) 30%,transparent); border-radius:var(--radio); padding:15px 18px; margin-bottom:20px; }}
+  .patron h4 {{ margin:0 0 7px; font-size:14px; font-weight:640; color:var(--naranja); }}
+  .patron p {{ margin:0 0 10px; font-size:13px; line-height:1.55; color:var(--suave); }}
+  .patron ul {{ margin:0; padding-left:19px; font-size:13px; }}
+  .patron li {{ margin-bottom:3px; }}
+
+  .graficas {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:14px; margin-bottom:14px; }}
+  figure {{ margin:0; min-width:0; background:var(--panel); border:1px solid var(--linea); border-radius:var(--radio); padding:15px 17px; box-shadow:var(--sombra); }}
+  figure.ancha {{ margin-bottom:14px; }}
+  figcaption {{ font-size:12px; font-weight:640; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; margin-bottom:13px; }}
+  .vacio {{ margin:0; font-size:13px; color:var(--suave); font-style:italic; }}
+
+  /* El contenido ancho scrollea dentro de su propia caja: el cuerpo de la
+     pagina nunca debe scrollear en horizontal. */
+  .scrollable {{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }}
+
+  /* Barras horizontales: una sola serie, la identidad va en la etiqueta */
+  .barras {{ display:flex; flex-direction:column; gap:8px; }}
+  .fila {{ display:grid; grid-template-columns:minmax(0,1.5fr) minmax(60px,2fr) auto; gap:10px; align-items:center; }}
+  .etq {{ font-size:12.5px; line-height:1.3; color:var(--texto); overflow-wrap:anywhere; }}
+  .pista {{ background:color-mix(in srgb,var(--suave) 15%,transparent); border-radius:4px; height:9px; overflow:hidden; }}
+  .barra {{ display:block; height:100%; border-radius:0 4px 4px 0; transition:width .3s ease; }}
+  .val {{ font-size:12px; font-weight:600; color:var(--suave); font-variant-numeric:tabular-nums; white-space:nowrap; }}
+  /* La textura marca "esta barra se sale de la escala" sin depender del color */
+  .fila.atipico .barra {{ background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(255,255,255,.32) 5px 10px); }}
+  .fila.atipico .val {{ color:var(--rojo); }}
+  .nota-escala {{ margin:11px 0 0; font-size:11px; line-height:1.45; color:var(--suave); font-style:italic; }}
+
+  /* Columnas por hora */
+  .horas {{ display:flex; gap:3px; align-items:flex-end; height:104px; min-width:420px; }}
+  .col {{ flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; gap:5px; }}
+  .tallo {{ width:100%; background:var(--acento); border-radius:3px 3px 0 0; min-height:2px; }}
+  .col.cero .tallo {{ background:color-mix(in srgb,var(--suave) 18%,transparent); height:2px!important; }}
+  .hh {{ font-size:9.5px; color:var(--suave); font-variant-numeric:tabular-nums; }}
+
+  /* Linea de tiempo de incidentes */
+  .linea {{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; }}
+  .ev {{ display:grid; grid-template-columns:auto minmax(0,1.1fr) auto minmax(0,1.8fr); gap:11px; align-items:center; padding:8px 11px; border-radius:7px; border-left:3px solid var(--linea); font-size:12.5px; }}
+  .ev:nth-child(odd) {{ background:color-mix(in srgb,var(--suave) 5%,transparent); }}
+  .ev.caido {{ border-left-color:var(--rojo); }}
+  .ev.degradado {{ border-left-color:var(--naranja); }}
+  .ev.lento {{ border-left-color:var(--amarillo); }}
+  .cuando {{ color:var(--suave); font-variant-numeric:tabular-nums; white-space:nowrap; }}
+  .quien {{ font-weight:600; color:var(--texto); }}
+  .dur {{ font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }}
+  .ev.caido .dur {{ color:var(--rojo); }}
+  .ev.degradado .dur {{ color:var(--naranja); }}
+  .ev.lento .dur {{ color:var(--amarillo); }}
+  .ev.abierto .dur::after {{ content:" ●"; }}
+  .pormenor {{ color:var(--suave); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+
   .pie {{ margin-top:26px; padding-top:16px; border-top:1px solid var(--linea); font-size:12px; color:var(--suave); display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; }}
+
+  @media (max-width:760px) {{
+    .ev {{ grid-template-columns:auto 1fr; row-gap:2px; }}
+    .ev .dur {{ grid-column:2; }}
+    .ev .pormenor {{ grid-column:1/-1; white-space:normal; }}
+    .fila {{ grid-template-columns:minmax(0,1fr) minmax(50px,1.4fr) auto; }}
+  }}
 
   @media (max-width:640px) {{
     body {{ padding:14px; }}
-    .rejilla {{ grid-template-columns:1fr; }}
+    .rejilla, .graficas {{ grid-template-columns:1fr; }}
+    .titulo-sec {{ flex-direction:column; gap:4px; }}
   }}
 </style>
 </head>
@@ -392,7 +458,7 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
   <section class="rejilla">
 {tarjetas}
   </section>
-
+{incidencias_html}
   <div class="pie">
     <span>Generado por el monitor DTS · {n_hist} sitios con historial</span>
     <span>Digital Transformation Services</span>
@@ -448,6 +514,186 @@ def _escribir(salida, cliente, ahora, total, conteo, banner_clase, banner_txt,
 """
     salida.write_text(doc, encoding="utf-8")
     return salida
+
+
+# ------------------------------------------------------- reporte de incidencias
+
+def _barras_horizontales(datos, unidad="", color="var(--rojo)", max_filas=12,
+                         formato=None):
+    """Barras horizontales para comparar magnitud entre sitios.
+
+    Una sola serie: el color no codifica identidad, solo dibuja la barra.
+    Por eso no hay leyenda ni problema de separacion para daltonismo — la
+    identidad la lleva la etiqueta de texto, que siempre esta.
+
+    Cuando un valor aplasta a los demas (un sitio caido tres dias contra
+    otros caidos tres minutos) la escala lineal vuelve invisible al resto.
+    En ese caso la barra dominante se marca aparte y la escala se calcula
+    sobre los demas, para que sigan siendo comparables entre si. El valor
+    real siempre se imprime al lado: la escala ayuda a comparar, el numero
+    es el que informa.
+    """
+    if not datos:
+        return '<p class="vacio">Sin datos en el periodo.</p>'
+
+    fmt = formato or (lambda v: f"{v}{unidad}")
+    filas = sorted(datos.items(), key=lambda x: -x[1])[:max_filas]
+    valores = [v for _, v in filas]
+    tope = max(valores) or 1
+
+    # ¿Hay un valor atipico que se come la escala?
+    resto = sorted(valores)[:-1]
+    mediana_resto = resto[len(resto) // 2] if resto else 0
+    hay_atipico = bool(resto) and mediana_resto > 0 and tope >= mediana_resto * 12
+    escala = max(resto) if hay_atipico and resto else tope
+
+    salida = ['<div class="barras">']
+    for etiqueta, valor in filas:
+        fuera = hay_atipico and valor > escala
+        pct = 100 if fuera else max(2, 100 * valor / (escala or 1))
+        texto = fmt(valor)
+        salida.append(
+            f'<div class="fila{" atipico" if fuera else ""}" '
+            f'title="{html.escape(etiqueta)}: {html.escape(texto)}">'
+            f'<span class="etq">{html.escape(etiqueta)}</span>'
+            f'<span class="pista"><span class="barra" style="width:{pct:.1f}%;'
+            f'background:{color}"></span></span>'
+            f'<span class="val">{html.escape(texto)}</span>'
+            f"</div>"
+        )
+    salida.append("</div>")
+    if hay_atipico:
+        salida.append(
+            '<p class="nota-escala">La barra rayada excede la escala del resto. '
+            "Se marca aparte para que los valores pequeños sigan siendo "
+            "comparables entre sí.</p>"
+        )
+    return "".join(salida)
+
+
+def _columnas_hora(por_hora):
+    """Incidentes por hora del dia. Delata si las caidas se concentran."""
+    if not por_hora:
+        return '<p class="vacio">Sin datos en el periodo.</p>'
+
+    tope = max(por_hora.values()) or 1
+    salida = ['<div class="horas">']
+    for h in range(24):
+        n = por_hora.get(h, 0)
+        alto = (n / tope) * 100 if n else 0
+        clase = "col" + (" cero" if not n else "")
+        titulo = f"{h:02d}:00 — {n} incidente{'s' if n != 1 else ''}"
+        salida.append(
+            f'<div class="{clase}" title="{titulo}">'
+            f'<span class="tallo" style="height:{alto:.0f}%"></span>'
+            f'<span class="hh">{h:02d}</span>'
+            f"</div>"
+        )
+    salida.append("</div>")
+    return "".join(salida)
+
+
+def _linea_tiempo(incidentes, publico, limite=12):
+    if not incidentes:
+        return '<p class="vacio">Sin incidentes registrados en el periodo. 🎉</p>'
+
+    import incidencias as inc
+    salida = ['<ol class="linea">']
+    for i in incidentes[:limite]:
+        est = i["estado"]
+        dur = "en curso" if i["abierto"] else inc.duracion_humana(i["minutos"])
+        causa = "" if publico else html.escape(i.get("causa", "")[:70])
+        abierto = " abierto" if i["abierto"] else ""
+        salida.append(
+            f'<li class="ev {est}{abierto}">'
+            f'<span class="cuando">{i["inicio"]:%d/%m %H:%M}</span>'
+            f'<span class="quien">{html.escape(i["sitio"])}</span>'
+            f'<span class="dur">{html.escape(dur)}</span>'
+            + (f'<span class="pormenor">{causa}</span>' if causa else "")
+            + "</li>"
+        )
+    salida.append("</ol>")
+    return "".join(salida)
+
+
+def seccion_incidencias(publico=False, historial_path=HISTORIAL, dias=7):
+    try:
+        import incidencias as inc
+    except ImportError:
+        return ""
+
+    try:
+        lista, res = inc.analizar(historial_path, dias)
+    except Exception:
+        return ""
+
+    if not res.get("revisiones"):
+        return ""
+
+    disp = res["disponibilidad"]
+    clase_disp = "bien" if disp >= 99.5 else ("alerta" if disp >= 97 else "mal")
+
+    periodo = ""
+    if res["desde"] and res["hasta"]:
+        periodo = f"{res['desde']:%d/%m} – {res['hasta']:%d/%m}"
+
+    # Aviso de caidas simultaneas: varios sitios cayendo dentro de la misma
+    # ventana casi nunca son fallas independientes.
+    aviso = ""
+    if res["simultaneos"]:
+        lineas = []
+        for cuando, sitios in res["simultaneos"]:
+            lineas.append(
+                f"<li><b>{cuando:%d/%m %H:%M}</b> — {len(sitios)} sitios: "
+                f"{html.escape(', '.join(sorted(sitios)))}</li>"
+            )
+        aviso = f"""
+      <div class="patron">
+        <h4>⚠️ Caídas simultáneas detectadas</h4>
+        <p>Tres o más sitios fallaron dentro de la misma ventana de 10 minutos.
+           Eso rara vez son fallas independientes: apunta a infraestructura
+           compartida — saturación del servidor, límite de recursos o un reinicio.</p>
+        <ul>{''.join(lineas)}</ul>
+      </div>"""
+
+    return f"""
+  <section class="incidencias">
+    <div class="titulo-sec">
+      <h2>Reporte de incidencias</h2>
+      <span class="periodo">{periodo} · {res['revisiones']:,} revisiones</span>
+    </div>
+
+    <section class="resumen">
+      <div class="kpi"><div class="n {clase_disp}">{disp}%</div><div class="l">Disponibilidad</div></div>
+      <div class="kpi"><div class="n">{res['incidentes']}</div><div class="l">Incidentes</div></div>
+      <div class="kpi"><div class="n">{res['sitios_afectados']}</div><div class="l">Sitios afectados</div></div>
+      <div class="kpi"><div class="n">{inc.duracion_humana(res['minutos_sin_servicio'])}</div><div class="l">Sin servicio</div></div>
+      <div class="kpi"><div class="n">{inc.duracion_humana(res['mttr'])}</div><div class="l">Recuperación media</div></div>
+    </section>
+    {aviso}
+
+    <div class="graficas">
+      <figure>
+        <figcaption>Incidentes por sitio</figcaption>
+        {_barras_horizontales(res['incidentes_por_sitio'])}
+      </figure>
+
+      <figure>
+        <figcaption>Tiempo sin servicio por sitio</figcaption>
+        {_barras_horizontales(res['minutos_por_sitio'], formato=inc.duracion_humana)}
+      </figure>
+    </div>
+
+    <figure class="ancha">
+      <figcaption>Incidentes por hora del día</figcaption>
+      <div class="scrollable">{_columnas_hora(res['por_hora'])}</div>
+    </figure>
+
+    <figure class="ancha">
+      <figcaption>Últimos incidentes{f' · {min(12, len(lista))} de {len(lista)}' if len(lista) > 12 else ''}</figcaption>
+      {_linea_tiempo(lista, publico)}
+    </figure>
+  </section>"""
 
 
 def generar_ambos(cliente, resultados=None, historial_path=HISTORIAL):

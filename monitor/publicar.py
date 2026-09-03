@@ -137,11 +137,68 @@ def envolver(html_completo):
             ]
             return ", ".join(piezas) + " {"
         css = re.sub(r"(?m)^\s{2}([^@{}\n][^{\n]*)\{", anidar, css)
+
         # Minificar: la pagina se republica seguido, cada KB cuenta.
         css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
         css = re.sub(r"\s*\n\s*", " ", css)
         css = re.sub(r"\s*([{};:,>])\s*", r"\1", css)
         css = re.sub(r";}", "}", css).strip()
+
+        # --- Blindaje contra el tema del sitio ---
+        # El tema de digitalts.com.mx fuerza `h3 {color:#1f1f1f}` y gana por
+        # especificidad, dejando los nombres de los sitios en negro sobre el
+        # fondo oscuro del dashboard: invisibles. Estas propiedades se marcan
+        # !important para que el bloque se vea igual sin importar el tema.
+        # No se tocan layout ni tamanos: solo lo que el tema pisa.
+        BLINDAR = ("color", "background", "background-color", "border-color",
+                   "border-left-color", "font", "font-size", "font-weight",
+                   "font-family", "line-height", "text-transform",
+                   "letter-spacing", "text-align", "margin", "padding")
+
+        def marcar(m):
+            prop, valor = m.group(1), m.group(2)
+            if prop.strip().lower() in BLINDAR and "!important" not in valor:
+                return f"{prop}:{valor.rstrip()}!important"
+            return m.group(0)
+
+        css = re.sub(r"([a-z-]+):([^;{}]+)(?=[;}])", marcar, css)
+
+        css += (
+            # --- Color heredado ---
+            # El dashboard suelto no declara `color` en los encabezados: los
+            # deja heredar del contenedor. El tema del sitio SI declara
+            # `h3{color:#1f1f1f}` sobre el elemento, y un valor propio siempre
+            # le gana a uno heredado — por eso los nombres salian en negro
+            # sobre el fondo oscuro. Se declara explicitamente aqui.
+            # Va antes que las reglas propias del dashboard en especificidad,
+            # asi que .badge, .val.bien y demas conservan su color.
+            f".{RAIZ} h1,.{RAIZ} h2,.{RAIZ} h3,.{RAIZ} h4,"
+            f".{RAIZ} p,.{RAIZ} li,.{RAIZ} ol,.{RAIZ} ul,"
+            f".{RAIZ} figure,.{RAIZ} figcaption,.{RAIZ} div,.{RAIZ} span"
+            f"{{color:var(--texto)!important}}"
+            # Los elementos que deben ir en tono apagado, ya con color propio.
+            f".{RAIZ} figcaption,.{RAIZ} .l,.{RAIZ} .k,.{RAIZ} .meta,"
+            f".{RAIZ} .detalle,.{RAIZ} .periodo,.{RAIZ} .val,.{RAIZ} .hh,"
+            f".{RAIZ} .cuando,.{RAIZ} .pormenor,.{RAIZ} .ip,.{RAIZ} .pie,"
+            f".{RAIZ} .pie span,.{RAIZ} .nota-escala,.{RAIZ} .vacio,"
+            f".{RAIZ} .sitio a,.{RAIZ} .patron p"
+            f"{{color:var(--suave)!important}}"
+
+            # El header del sitio es position:fixed con 65px de alto y se
+            # encimaba sobre el titulo del dashboard.
+            f".{RAIZ}{{padding-top:96px!important;"
+            f"position:relative;z-index:1;"
+            f"border-radius:14px;overflow:hidden}}"
+            # Que el ancho del tema no estrangule la rejilla.
+            f".{RAIZ} .wrap{{max-width:100%!important}}"
+            # Que el tema no meta listas con vinetas ni sangrias raras.
+            f".{RAIZ} .linea{{list-style:none!important;padding-left:0!important}}"
+            # Ocultar los botones de compartir de Jetpack si el tema los
+            # vuelve a inyectar.
+            "#jp-post-flair,.sharedaddy,.sd-sharing,.sd-block,"
+            ".jp-relatedposts,.sd-like{display:none!important}"
+        )
+
         partes.append(f"<style>{css}</style>")
 
     if cuerpo:
